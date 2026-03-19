@@ -76,7 +76,6 @@ git push origin dev/implementacion
 
 ### Detalles Técnicos
 * **Algoritmo de Asignación:** (First-Fit / Best-Fit)
-* **Estrategia de Fusión:** (Inmediata / Diferida / No implementada)
 
 ### Declaración de Uso de IA (Transparencia)
 * **¿Usaste IA (ChatGPT, Claude, Copilot)?** (Sí / No)
