@@ -8,7 +8,7 @@
 typedef struct block_meta {
     size_t size;
     struct block_meta *next;
-    int free; // 1 si está libre, 0 si está ocupado
+    short free; // 1 si está libre, 0 si está ocupado
     int magic; // Para debugging (ej. 0x12345678)
 } block_meta;
 
@@ -19,5 +19,6 @@ void *my_malloc(size_t size);
 void my_free(void *ptr);
 void *my_calloc(size_t nmemb, size_t size);
 void *my_realloc(void *ptr, size_t size);
+block_meta* split_block(block_meta* block, size_t size);
 
 #endif
