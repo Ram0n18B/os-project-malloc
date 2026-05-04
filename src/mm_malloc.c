@@ -44,6 +44,21 @@ void *my_malloc(size_t size) {
 void my_free(void *ptr) {
     // TODO: Marcar el bloque como libre.
     // TODO: Fusionar bloques adyacentes (Coalescing).
+    size_t blockMetaSize = sizeof(block_meta);
+    for(block_meta* it = (block_meta*) base; it != NULL; it = it->next)
+    {
+        if(((void*) it) + blockMetaSize != ptr) continue;
+        if(it->free)
+        {
+            perror("my_free: Pointer was already freed\n");
+            _exit(134);
+        }
+        it->free = true;
+        coalesce(it);
+        return;
+    }
+    perror("my_free(): Invalid pointer\n");
+    _exit(134);
 }
 
 void *my_calloc(size_t nmemb, size_t size) {
@@ -72,4 +87,12 @@ block_meta* split_block(block_meta* block, size_t size)
     block->size = size;
     block->next = splitted;
     return block;
+}
+
+void coalesce(block_meta* block)
+{
+    assert(block->next->magic == 12345678 && block->magic == 12345678);
+    if(!block->next->free) return;
+    block->size += sizeof(block_meta) + block->next->size;
+    block->next = block->next->next;
 }
