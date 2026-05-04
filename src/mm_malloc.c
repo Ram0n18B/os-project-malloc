@@ -1,6 +1,7 @@
 #include <unistd.h> // Para sbrk
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
 #include "include/mm_malloc.h"
 
 #define true 1
@@ -63,7 +64,12 @@ void my_free(void *ptr) {
 
 void *my_calloc(size_t nmemb, size_t size) {
     // TODO: Usar my_malloc y luego memset a 0.
-    return NULL;
+    size_t total_size = nmemb*size;
+    void* ptr = my_malloc(total_size);
+    memset(ptr,0,total_size);
+    block_meta* block = (block_meta*)(ptr - sizeof(block_meta));
+    assert(block->magic == 12345678);
+    return ptr;
 }
 
 void *my_realloc(void *ptr, size_t size) {
