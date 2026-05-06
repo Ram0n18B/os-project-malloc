@@ -8,6 +8,7 @@
 typedef struct block_meta {
     size_t size;
     struct block_meta *next;
+    struct block_meta *prev;
     short free; // 1 si está libre, 0 si está ocupado
     int magic; // Para debugging (ej. 0x12345678)
 } block_meta;
