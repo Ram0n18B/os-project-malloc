@@ -21,6 +21,6 @@ void my_free(void *ptr);
 void *my_calloc(size_t nmemb, size_t size);
 void *my_realloc(void *ptr, size_t size);
 block_meta* split_block(block_meta* block, size_t size);
-void coalesce(block_meta* block);
+void coalesce(block_meta* first);
 
 #endif
