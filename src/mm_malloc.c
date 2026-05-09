@@ -1,6 +1,5 @@
 #include <unistd.h> // Para sbrk
 #include <stdio.h>
-#include <assert.h>
 #include <string.h>
 #include "mm_malloc.h"
 
@@ -17,7 +16,6 @@ void *my_malloc(size_t size) {
     // 1. Verificar si hay un bloque libre del tamaño adecuado.
     // 2. Si no, pedir espacio al OS con sbrk().
     block_meta * const blocksBase = (block_meta*) base;
-    assert(blocksBase == NULL || blocksBase->next == NULL || (blocksBase->next->prev == blocksBase));
     block_meta* newBlock = NULL;
     for(block_meta* it = blocksBase; it != NULL; it = it->next)
     {
@@ -49,9 +47,7 @@ void *my_malloc(size_t size) {
     newBlock->size = pageSize - BLOCK_META_SIZE;
     newBlock->next = NULL;
     newBlock->magic = 0x12345678;
-    assert(newBlock->next == NULL || (newBlock->next->prev == newBlock));
     newBlock = split_block(newBlock,size);
-    assert(newBlock->next == NULL || (newBlock->next->prev == newBlock));
     if(newBlock == NULL) return NULL;
     newBlock->free = FALSE;
     void* ptr = ((void*) newBlock) + BLOCK_META_SIZE;
@@ -74,25 +70,26 @@ void my_free(void *ptr) {
     }
     block->free = TRUE;
     if(block->next != NULL && block->next->free) coalesce(block);
-    assert(block->next == NULL || (block->next->prev == block));
-    if(block != ((block_meta*) base) && block->prev->free)coalesce(block->prev);
-    assert(block->next == NULL || (block->next->prev == block));
+    if(block != ((block_meta*) base) && block->prev->free) coalesce(block->prev);
 }
 
 void *my_calloc(size_t nmemb, size_t size) {
     // TODO: Usar my_malloc y luego memset a 0.
     const size_t total_size = nmemb*size;
     void* ptr = my_malloc(total_size);
+    if(ptr == NULL) return NULL;
     memset(ptr,0,total_size);
-    block_meta* block = (block_meta*)(ptr - BLOCK_META_SIZE);
-    assert(block->magic == 0x12345678);
     return ptr;
 }
 
 void *my_realloc(void *ptr, size_t size) {
     // TODO: Redimensionar el bloque o moverlo a uno nuevo.
     block_meta* block = (block_meta*)(ptr - BLOCK_META_SIZE);
-    assert(block->magic == 0x12345678);
+    if(block->magic != 0x12345678)
+    { 
+        perror("my_realloc): Invalid pointer\n");
+        _exit(134);
+    }
     int sizeDiff = size - block->size;
     if(sizeDiff > 0)
     {
@@ -103,25 +100,25 @@ void *my_realloc(void *ptr, size_t size) {
             return newPtr;
         }
         if(split_block(block->next,sizeDiff) == NULL) return NULL;
-        assert(block->next->next == NULL || (block->next->next->prev == block->next));
         coalesce(block);
-        assert(block->next->next == NULL || (block->next->next->prev == block->next));
         return ptr;
     }
     else if(sizeDiff < 0)
     {
         block = split_block(block,size);
-        assert(block->next == NULL || (block->next->prev == block));
         if(block == NULL) return NULL;
-        coalesce(block->next);
-        assert(block->next == NULL || (block->next->prev == block));
+        if(block->next != NULL && block->next->free) coalesce(block->next);
     }
     return ptr;
 }
 
 block_meta* split_block(block_meta* block, size_t size)
 {
-    assert(block->magic == 0x12345678);
+    if(block->magic != 0x12345678)
+    { 
+        perror("split_block(): Invalid block\n");
+        _exit(134);
+    }
     if(block->size == size) return block;
     if(block->size < (size + BLOCK_META_SIZE)) return NULL;
     block_meta* splitted = (block_meta*)(((void*) block) + BLOCK_META_SIZE + size);
@@ -140,9 +137,14 @@ block_meta* split_block(block_meta* block, size_t size)
 
 void coalesce(block_meta* block)
 {
-    assert(block->magic == 0x12345678);
+    if(block->magic != 0x12345678)
+    { 
+        perror("coalesce(): Invalid block\n");
+        _exit(134);
+    }
+    if(block->next == NULL) return;
     block_meta* nextBckp = block->next;
-    if(nextBckp == NULL) return;
+    if(nextBckp == NULL || !nextBckp->free) return;
     block->size += BLOCK_META_SIZE + nextBckp->size;
     block->next = nextBckp->next;
     if(block->next == NULL) {((block_meta*) base)->prev = block;}
