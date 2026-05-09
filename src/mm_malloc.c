@@ -12,19 +12,14 @@
 void *base = NULL;
 
 void *my_malloc(size_t size) {
-    // TODO: Implementar First-Fit o Best-Fit
-    // 1. Verificar si hay un bloque libre del tamaño adecuado.
-    // 2. Si no, pedir espacio al OS con sbrk().
+    //Casteo de base para facilitar su uso
     block_meta * const blocksBase = (block_meta*) base;
     block_meta* newBlock = NULL;
     for(block_meta* it = blocksBase; it != NULL; it = it->next)
     {
-        assert(it->magic == 0x12345678);
-        assert(it->next == NULL || (it->next->prev == it));
         if(!it->free || it->size < size) continue;
         newBlock = split_block(it,size);
         if(newBlock == NULL) continue;
-        assert(newBlock->next == NULL || (newBlock->next->prev == newBlock));
         newBlock->free = FALSE;
         return ((void*) newBlock) + BLOCK_META_SIZE;
     }
@@ -32,6 +27,7 @@ void *my_malloc(size_t size) {
     if(base == NULL)
     {
         base = sbrk(pageSize);
+        //sbrk retorna (void *) -1 si falla
         if(base == (void *) -1) return NULL;
         newBlock = (block_meta*) base;
         newBlock->prev = newBlock;
@@ -55,9 +51,9 @@ void *my_malloc(size_t size) {
 }
 
 void my_free(void *ptr) {
-    // TODO: Marcar el bloque como libre.
-    // TODO: Fusionar bloques adyacentes (Coalescing).
+    //Obtener los metadatos del bloque
     block_meta* block = (block_meta*) (ptr - BLOCK_META_SIZE);
+    //Si este chequeo falla, es porque el apuntador  no estaba asociado a un bloque de memoria
     if(block->magic != 0x12345678)
     { 
         perror("my_free(): Invalid pointer\n");
@@ -83,7 +79,6 @@ void *my_calloc(size_t nmemb, size_t size) {
 }
 
 void *my_realloc(void *ptr, size_t size) {
-    // TODO: Redimensionar el bloque o moverlo a uno nuevo.
     block_meta* block = (block_meta*)(ptr - BLOCK_META_SIZE);
     if(block->magic != 0x12345678)
     { 
@@ -121,6 +116,8 @@ block_meta* split_block(block_meta* block, size_t size)
     }
     if(block->size == size) return block;
     if(block->size < (size + BLOCK_META_SIZE)) return NULL;
+
+    //splitted apunta a una dirección de memoria que está a BLOCK_META_SIZE + size bytes de la que apunta block
     block_meta* splitted = (block_meta*)(((void*) block) + BLOCK_META_SIZE + size);
     splitted->size = block->size - size - BLOCK_META_SIZE;
     splitted->next = block->next;
@@ -131,7 +128,6 @@ block_meta* split_block(block_meta* block, size_t size)
     block->size = size;
     block->next = splitted;
     if(splitted->next == NULL) {((block_meta*) base)->prev = splitted;}
-    assert(block->next->magic == 0x12345678);
     return block;
 }
 
